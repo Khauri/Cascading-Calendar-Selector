@@ -1,0 +1,23 @@
+{
+  "name": "ccs",
+  "version": "0.0.1",
+  "description": "Cascading Calendar Selector for streamlining date selection in an appplicatiion",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ccs"
+  ],
+  "author": "khauri",
+  "license": "ISC",
+  "dependencies": {
+    "moment": "^2.14.1"
+  },
+  "devDependencies": {
+    "browserify": "^13.1.0",
+    "grunt": "^1.0.1",
+    "grunt-browserify": "^5.0.0",
+    "grunt-contrib-uglify": "^2.0.0"
+  }
+}
