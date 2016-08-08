@@ -23,7 +23,10 @@
 
     function generateSidebar() {
         var div = document.createElement('div');
+        var ul = document.createElement('ul');
+        ul.classList.add('ccs_selections');
         div.classList.add("ccs_sidebar");
+        div.appendChild(ul);
         return div;
     }
 
@@ -35,6 +38,6 @@
     }
 
     function generateHeader() {
-
+    	//generate today, up, down, and section links
     }
 })();

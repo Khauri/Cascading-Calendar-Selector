@@ -10,6 +10,19 @@ ccs {
 	overflow:hidden;
 	border: 1px solid #bcbcbc;
 }
+.ccs_no_background{
+	background-color:transparent !important;
+}
+.ccs_no_border{
+	border: 0px !important;
+}
+ccs ul{
+	list-style-type:none;
+}
+ccs li{
+	float:left;
+	padding-bottom:10px;
+}
 ccs th{
 	font-weight:lighter;
 	font-size:.85em;

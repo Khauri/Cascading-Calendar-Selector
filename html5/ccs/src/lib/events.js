@@ -19,31 +19,46 @@
 
     }
 
-    function addEvents(ccs, y, m, d) {
-        y.addEventListener('click', function(e) {
-            //console.log(e);
-            if (!e.srcElement.classList.contains("ccs_col")) return false;
-            //e.srcElement.classList.toggle("ccs_col_selected");
-            ccs.year = Moment(e.srcElement.id).startOf('year');
-            ccs.next(ccs.year);
-        });
-        m.addEventListener('click', function(e) {
-            //
-            if (!e.srcElement.classList.contains("ccs_col")) return false;
-            //e.srcElement.classList.toggle("ccs_col_selected");
-            ccs.month = Moment(e.srcElement.id).startOf('month');
-            ccs.next(ccs.month);
-        });
-        d.addEventListener('click', function(e) {
-            if (!e.srcElement.classList.contains("ccs_col")) return false;
-            e.srcElement.classList.toggle("ccs_col_selected");
-            ccs.day = Moment(e.srcElement.id);
-            if (e.srcElement.classList.contains('ccs_col_selected')) {
-                ccs.addSelection(ccs.day);
-            }else{
-                ccs.removeSelection(ccs.day);
+    function hasClass(el, c) {
+        return el.classList.contains(c);
+    }
+    /**
+        this function needs annotation
+     */
+    function addEvents(ccs) {
+        var root_el = ccs.templated.root;
+        root_el.addEventListener('click', function(e) {
+            src_el = e.target || e.srcElement;
+            if (hasClass(src_el, "ccs_col")) {
+                if (hasClass(src_el, "ccs_col_days")) {
+                    src_el.classList.toggle("ccs_col_selected");
+                    var day = Moment(e.srcElement.id);
+                    if (hasClass(src_el, 'ccs_col_selected')) {
+                        ccs.addSelection(day);
+                    } else {
+                        ccs.removeSelection(day);
+                    }
+                    ccs.next(day);
+                } else if (hasClass(src_el, "ccs_col_months")) {
+                    var month = Moment(src_el.id).startOf('month');
+                    ccs.next(month);
+                } else if (hasClass(src_el, "ccs_col_years")) {
+                    var year = Moment(src_el.id).startOf('year');
+                    ccs.next(year);
+                }
+            } else if (hasClass(src_el, 'ccs_control')) {
+                if (hasClass(src_el, 'ccs_back')) {
+                    ccs.prev();
+                } else if (hasClass(src_el, 'ccs_up')) {
+                    ccs.scroll(-1);
+                } else if (hasClass(src_el, 'ccs_down')) {
+                    ccs.scroll(1);
+                }
+            } else if (hasClass(src_el, 'ccs_today')) {
+                //console.log('Wow');
+                ccs.goto(Moment(), 'days', true);
             }
-            ccs.next(ccs.day);
+            e.stopPropagation();
         });
     }
 

@@ -253,11 +253,13 @@ module.exports = (function() {
         this.configs = {
             show: {
                 today: true, //today's date
-                limit: true,
+                limit: false,
                 daysOfWeek: true, //days of the week table head
                 doneButton: true, //a 'done' button
                 animations: true, //calendar view switch animations
                 jumpTo: true, //a search box allowing  one to jump to a particular date
+                border: true,
+                background: true,
                 //to be implemented later
                 settings: false,
                 multiToggler: false
@@ -269,7 +271,7 @@ module.exports = (function() {
             //setting smoothScroll to true will add a touch event
             //that generates excess rows and allows traversal by
             //scroll bar
-            smoothScroll: true, //not implemented
+            smoothScroll: true, //not implemented in this version probably
             style: {
                 minWidth: 720,
                 minHeight: 400
@@ -290,7 +292,7 @@ module.exports = (function() {
                 selectable: "SMTWTFZ",
                 consecutive: false,
             },
-            time: {
+            time: { //not yet implemented
                 selectable: false,
             },
             start: {
@@ -299,9 +301,6 @@ module.exports = (function() {
             }
         }
         this.today = Moment();
-        this.year = null;
-        this.month = null;
-        this.day = null;
         this.selections = [];
         this.config(o)
         init.call(this);
@@ -328,9 +327,11 @@ module.exports = (function() {
         */
         scroll: scroll,
 
-        gotoDate: null,
+        goto: go,
 
         addSelection: addSelection,
+
+        update: update,
 
         removeSelection: removeSelection,
 
@@ -355,11 +356,20 @@ module.exports = (function() {
         var self = this;
         // create all the shit
         // this should only be run one time probably
+        var t0 = performance.now();
+        this.templated = utils.generate.calendar();
+        var t1 = performance.now();
+        console.log("template generated in " + (t1 - t0) + " milliseconds");
+
         var root_el = document.querySelector(this.configs.selector);
+
         if (!root_el) root_el = document.createElement('ccs');
+        root_el.appendChild(this.templated.root);
+
         var start_date = self.configs.start.date;
 
         var years = new CalSection({
+                cal: self,
                 section: "years",
                 cols: 4,
                 rows: 4,
@@ -369,6 +379,7 @@ module.exports = (function() {
                 range_end: [start_date.clone(), [10, "years"]]
             }),
             months = new CalSection({
+                cal :self,
                 section: "months",
                 cols: 4,
                 rows: 4,
@@ -378,6 +389,7 @@ module.exports = (function() {
                 range_end: [start_date.clone(), ["year"]]
             }),
             days = new CalSection({
+                cal : self,
                 section: "days",
                 cols: 7,
                 rows: 6,
@@ -386,15 +398,16 @@ module.exports = (function() {
                 range_start: [start_date.clone(), ["month"]],
                 range_end: [start_date.clone(), ["month"]]
             });
-        //this entire section needs fixing
-        events.add(this, years.view, months.view, days.view);
-        var table_root = document.createElement('div');
-        root_el.appendChild(table_root);
-        root_el.parentNode.appendChild(templates.side_bar());
-        table_root.classList.add("ccs_tables_cont");
+
+        var table_root = this.templated.findById("tables").root;
         years.appendTo(table_root);
         months.appendTo(table_root);
         days.appendTo(table_root);
+        //turn on optional features
+        this.templated.findById("today").root.innerHTML = Moment().format("dddd, MMM D, YYYY");
+        this.templated.findById("up").root.innerHTML = "Up";
+        this.templated.findById("down").root.innerHTML = "Down";
+        this.templated.findById("back").root.innerHTML = "Back";
 
         this.sections = {
             0: years,
@@ -406,22 +419,60 @@ module.exports = (function() {
         this.switchTo(this.configs.start.section);
 
         this.view = root_el;
+        
+        //add events and such
+        events.add(this);
+        var t2 = performance.now();
+        console.log("initialization complete in " + (t2 - t0) + " milliseconds");
 
         return this;
     }
 
-    function switchTo(v) {
+    function update() {
+        /*update the selections*/
+        var ul = document.querySelector(".ccs_selections");
+        if (ul) {
+            while (ul.firstChild) {
+                ul.removeChild(ul.firstChild);
+            }
+            var li;
+            for (var i = 0; i < this.selections.length; i++) {
+                li = document.createElement("li");
+                li.innerHTML = this.selections[i].format("dddd, MMM D, YYYY");
+                ul.appendChild(li);
+            }
+        }
+    }
+
+    function switchTo(v, hide) {
         var i = 0,
             curr = this.sections[i];
         while (curr) {
             if (curr.section.toLowerCase() == v.toLowerCase()) {
-                curr.display(true);
+                if(!hide) curr.display(true);
                 this.sections.curr = i;
             } else {
                 curr.display(false);
             }
             i += 1;
             curr = this.sections[i];
+        }
+        return this;
+    }
+
+    function go(date, section, animate){
+        var self = this;
+        function switchIt(){
+            if(section) self.switchTo(section, true);
+            self.sections[self.sections.curr].gotoDate(date);
+            if(animate){
+                self.sections[self.sections.curr].fadeIn(null, true);
+            }
+        }
+        if(animate){
+            this.sections[this.sections.curr].fadeOut(switchIt, true);
+        }else{
+            switchIt();
         }
         return this;
     }
@@ -463,6 +514,7 @@ module.exports = (function() {
         var mmnt = Moment(date);
         if (!this.getSelected(mmnt)) {
             this.selections.push(mmnt);
+            this.update();
             return true;
         }
         return false;
@@ -472,7 +524,8 @@ module.exports = (function() {
         var mmnt = Moment(date);
         var selection = this.getSelected(mmnt)
         if (selection) {
-            this.selections.splice(selection.index,1);
+            this.selections.splice(selection.index, 1);
+            this.update();
             return true;
         }
         return false;
@@ -515,31 +568,46 @@ module.exports = (function() {
 
     }
 
-    function addEvents(ccs, y, m, d) {
-        y.addEventListener('click', function(e) {
-            //console.log(e);
-            if (!e.srcElement.classList.contains("ccs_col")) return false;
-            //e.srcElement.classList.toggle("ccs_col_selected");
-            ccs.year = Moment(e.srcElement.id).startOf('year');
-            ccs.next(ccs.year);
-        });
-        m.addEventListener('click', function(e) {
-            //
-            if (!e.srcElement.classList.contains("ccs_col")) return false;
-            //e.srcElement.classList.toggle("ccs_col_selected");
-            ccs.month = Moment(e.srcElement.id).startOf('month');
-            ccs.next(ccs.month);
-        });
-        d.addEventListener('click', function(e) {
-            if (!e.srcElement.classList.contains("ccs_col")) return false;
-            e.srcElement.classList.toggle("ccs_col_selected");
-            ccs.day = Moment(e.srcElement.id);
-            if (e.srcElement.classList.contains('ccs_col_selected')) {
-                ccs.addSelection(ccs.day);
-            }else{
-                ccs.removeSelection(ccs.day);
+    function hasClass(el, c) {
+        return el.classList.contains(c);
+    }
+    /**
+        this function needs annotation
+     */
+    function addEvents(ccs) {
+        var root_el = ccs.templated.root;
+        root_el.addEventListener('click', function(e) {
+            src_el = e.target || e.srcElement;
+            if (hasClass(src_el, "ccs_col")) {
+                if (hasClass(src_el, "ccs_col_days")) {
+                    src_el.classList.toggle("ccs_col_selected");
+                    var day = Moment(e.srcElement.id);
+                    if (hasClass(src_el, 'ccs_col_selected')) {
+                        ccs.addSelection(day);
+                    } else {
+                        ccs.removeSelection(day);
+                    }
+                    ccs.next(day);
+                } else if (hasClass(src_el, "ccs_col_months")) {
+                    var month = Moment(src_el.id).startOf('month');
+                    ccs.next(month);
+                } else if (hasClass(src_el, "ccs_col_years")) {
+                    var year = Moment(src_el.id).startOf('year');
+                    ccs.next(year);
+                }
+            } else if (hasClass(src_el, 'ccs_control')) {
+                if (hasClass(src_el, 'ccs_back')) {
+                    ccs.prev();
+                } else if (hasClass(src_el, 'ccs_up')) {
+                    ccs.scroll(-1);
+                } else if (hasClass(src_el, 'ccs_down')) {
+                    ccs.scroll(1);
+                }
+            } else if (hasClass(src_el, 'ccs_today')) {
+                //console.log('Wow');
+                ccs.goto(Moment(), 'days', true);
             }
-            ccs.next(ccs.day);
+            e.stopPropagation();
         });
     }
 
@@ -576,7 +644,10 @@ module.exports = (function() {
 
     function generateSidebar() {
         var div = document.createElement('div');
+        var ul = document.createElement('ul');
+        ul.classList.add('ccs_selections');
         div.classList.add("ccs_sidebar");
+        div.appendChild(ul);
         return div;
     }
 
@@ -588,15 +659,80 @@ module.exports = (function() {
     }
 
     function generateHeader() {
-
+    	//generate today, up, down, and section links
     }
 })();
 },{}],7:[function(require,module,exports){
 (function() {
     var events = require('../lib/events');
     var templates = require('../lib/templates')
-        //should we create a whole new table?
-        /* Create a table */
+    /* The real question is: which is faster, generating via this small template engine
+        or manually generating everything? The world may never know...*/
+    var template = {
+        "div.ccs_datePicker#datepicker": {
+            "div.ccs_today#today": {},
+            "div.ccs_controls#controls": {
+                "p.ccs_control.ccs_back#back": {},
+                "p.ccs_control.ccs_down#down":{},
+                "p.ccs_control.ccs_up#up": {}
+            },
+            "div.ccs_tables_cont#tables": {}
+        },
+        "div.ccs_sideBar#sidebar": {
+            "ul.ccs_tabs#tabs":{},
+            "ul.ccs_selections#selections":{}
+        }
+    };
+
+    function newElement(type, classes) {
+        try {
+            var el = document.createElement(type);
+        } catch (err) {
+            var el = document.createElement('div');
+        }
+        for (var i = 0, length = classes.length; i < length; i++) {
+            el.classList.add(classes[i]);
+        }
+        return el;
+    }
+
+    function generateTemplate() {
+        function helper(obj, s) {
+            if (!obj || typeof obj == "function") {
+                return null;
+            }
+            if (typeof obj == "string") {
+                return document.createTextNode(obj);
+            }
+            var keys = Object.keys(obj);
+            s = s.substring(0,s.indexOf("#"));
+            var parsed = s.split(".");
+            obj.root = newElement(parsed[0], parsed.slice(1));
+            for (var i = 0, len = keys.length; i < len; i++) {
+                el = helper(obj[keys[i]], keys[i]);
+                if(el){
+                    obj.root.appendChild(el);
+                }
+            }
+            return obj.root;
+        }
+        helper(template, "ccs_root");
+        template.findById = findById;
+        return template;
+    }
+
+    function findById(id){
+        function helper(obj){
+            var keys = Object.keys(obj);
+            for(var i=0;i<keys.length;i++){
+                if(keys[i].substring(keys[i].indexOf("#")+1) == id) return obj[keys[i]];
+                val = helper(obj[keys[i]]);
+                if(val) return val;
+            }
+            return null;
+        }
+        return helper(template);
+    }
 
     function createTable(cols, classes) {
         var table = document.createElement('table');
@@ -604,7 +740,7 @@ module.exports = (function() {
         var body = document.createElement('tbody');
         if (classes.indexOf("days") > -1) {
             var head = templates.days_head();
-        }else{
+        } else {
             var head = document.createElement('thead');
         }
         table.appendChild(head);
@@ -636,17 +772,11 @@ module.exports = (function() {
             docs: docs
         }
     }
-    /* adds classes to a batch of elements */
-    function ac(el_arr, classes) {
-        for (var i = 0; i < el_arr.length; i++) {
-            el_arr[i].className += classes;
-        }
-    }
 
     module.exports = {
         table: createTable,
         rows: createRows,
-        classes: ac
+        calendar: generateTemplate,
     };
 
 })();

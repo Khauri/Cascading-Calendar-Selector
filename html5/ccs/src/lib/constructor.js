@@ -12,11 +12,13 @@ module.exports = (function() {
         this.configs = {
             show: {
                 today: true, //today's date
-                limit: true,
+                limit: false,
                 daysOfWeek: true, //days of the week table head
                 doneButton: true, //a 'done' button
                 animations: true, //calendar view switch animations
                 jumpTo: true, //a search box allowing  one to jump to a particular date
+                border: true,
+                background: true,
                 //to be implemented later
                 settings: false,
                 multiToggler: false
@@ -28,7 +30,7 @@ module.exports = (function() {
             //setting smoothScroll to true will add a touch event
             //that generates excess rows and allows traversal by
             //scroll bar
-            smoothScroll: true, //not implemented
+            smoothScroll: true, //not implemented in this version probably
             style: {
                 minWidth: 720,
                 minHeight: 400
@@ -49,7 +51,7 @@ module.exports = (function() {
                 selectable: "SMTWTFZ",
                 consecutive: false,
             },
-            time: {
+            time: { //not yet implemented
                 selectable: false,
             },
             start: {
@@ -58,9 +60,6 @@ module.exports = (function() {
             }
         }
         this.today = Moment();
-        this.year = null;
-        this.month = null;
-        this.day = null;
         this.selections = [];
         this.config(o)
         init.call(this);
@@ -87,9 +86,11 @@ module.exports = (function() {
         */
         scroll: scroll,
 
-        gotoDate: null,
+        goto: go,
 
         addSelection: addSelection,
+
+        update: update,
 
         removeSelection: removeSelection,
 
@@ -114,11 +115,20 @@ module.exports = (function() {
         var self = this;
         // create all the shit
         // this should only be run one time probably
+        var t0 = performance.now();
+        this.templated = utils.generate.calendar();
+        var t1 = performance.now();
+        console.log("template generated in " + (t1 - t0) + " milliseconds");
+
         var root_el = document.querySelector(this.configs.selector);
+
         if (!root_el) root_el = document.createElement('ccs');
+        root_el.appendChild(this.templated.root);
+
         var start_date = self.configs.start.date;
 
         var years = new CalSection({
+                cal: self,
                 section: "years",
                 cols: 4,
                 rows: 4,
@@ -128,6 +138,7 @@ module.exports = (function() {
                 range_end: [start_date.clone(), [10, "years"]]
             }),
             months = new CalSection({
+                cal :self,
                 section: "months",
                 cols: 4,
                 rows: 4,
@@ -137,6 +148,7 @@ module.exports = (function() {
                 range_end: [start_date.clone(), ["year"]]
             }),
             days = new CalSection({
+                cal : self,
                 section: "days",
                 cols: 7,
                 rows: 6,
@@ -145,15 +157,16 @@ module.exports = (function() {
                 range_start: [start_date.clone(), ["month"]],
                 range_end: [start_date.clone(), ["month"]]
             });
-        //this entire section needs fixing
-        events.add(this, years.view, months.view, days.view);
-        var table_root = document.createElement('div');
-        root_el.appendChild(table_root);
-        root_el.parentNode.appendChild(templates.side_bar());
-        table_root.classList.add("ccs_tables_cont");
+
+        var table_root = this.templated.findById("tables").root;
         years.appendTo(table_root);
         months.appendTo(table_root);
         days.appendTo(table_root);
+        //turn on optional features
+        this.templated.findById("today").root.innerHTML = Moment().format("dddd, MMM D, YYYY");
+        this.templated.findById("up").root.innerHTML = "Up";
+        this.templated.findById("down").root.innerHTML = "Down";
+        this.templated.findById("back").root.innerHTML = "Back";
 
         this.sections = {
             0: years,
@@ -165,22 +178,60 @@ module.exports = (function() {
         this.switchTo(this.configs.start.section);
 
         this.view = root_el;
+        
+        //add events and such
+        events.add(this);
+        var t2 = performance.now();
+        console.log("initialization complete in " + (t2 - t0) + " milliseconds");
 
         return this;
     }
 
-    function switchTo(v) {
+    function update() {
+        /*update the selections*/
+        var ul = document.querySelector(".ccs_selections");
+        if (ul) {
+            while (ul.firstChild) {
+                ul.removeChild(ul.firstChild);
+            }
+            var li;
+            for (var i = 0; i < this.selections.length; i++) {
+                li = document.createElement("li");
+                li.innerHTML = this.selections[i].format("dddd, MMM D, YYYY");
+                ul.appendChild(li);
+            }
+        }
+    }
+
+    function switchTo(v, hide) {
         var i = 0,
             curr = this.sections[i];
         while (curr) {
             if (curr.section.toLowerCase() == v.toLowerCase()) {
-                curr.display(true);
+                if(!hide) curr.display(true);
                 this.sections.curr = i;
             } else {
                 curr.display(false);
             }
             i += 1;
             curr = this.sections[i];
+        }
+        return this;
+    }
+
+    function go(date, section, animate){
+        var self = this;
+        function switchIt(){
+            if(section) self.switchTo(section, true);
+            self.sections[self.sections.curr].gotoDate(date);
+            if(animate){
+                self.sections[self.sections.curr].fadeIn(null, true);
+            }
+        }
+        if(animate){
+            this.sections[this.sections.curr].fadeOut(switchIt, true);
+        }else{
+            switchIt();
         }
         return this;
     }
@@ -222,6 +273,7 @@ module.exports = (function() {
         var mmnt = Moment(date);
         if (!this.getSelected(mmnt)) {
             this.selections.push(mmnt);
+            this.update();
             return true;
         }
         return false;
@@ -231,7 +283,8 @@ module.exports = (function() {
         var mmnt = Moment(date);
         var selection = this.getSelected(mmnt)
         if (selection) {
-            this.selections.splice(selection.index,1);
+            this.selections.splice(selection.index, 1);
+            this.update();
             return true;
         }
         return false;
