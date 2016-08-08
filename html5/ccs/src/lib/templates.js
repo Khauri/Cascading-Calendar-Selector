@@ -1,6 +1,7 @@
 (function() {
     module.exports = {
         header: generateHeader,
+        side_bar: generateSidebar,
         footer: generateFooter,
         days_head: generateDaysHeader,
     }
@@ -20,11 +21,17 @@
         return head;
     }
 
+    function generateSidebar() {
+        var div = document.createElement('div');
+        div.classList.add("ccs_sidebar");
+        return div;
+    }
+
     function generateFooter() {
-    	var div = docoment.createElement('div');
-    	div.classList.add("ccs_footer");
-    	//add finished button
-    	return div;
+        var div = document.createElement('div');
+        div.classList.add("ccs_footer");
+        //add finished button
+        return div;
     }
 
     function generateHeader() {

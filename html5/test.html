@@ -1,106 +1,31 @@
 <head>
-	<style>
-	ccs {
-		display:inline-block;
-		padding:10px;
-		background-color:rgba(50,50,50,.75);
-		font-family:helvetica, arial;
-		color:#fafafa;
-		overflow:hidden;
-		border: 1px solid #bcbcbc;
-	}
-	ccs th{
-		font-weight:lighter;
-		font-size:.85em;
-	}
-	ccs *{
-	    -webkit-user-select: none;
-		cursor:default;
-	}
-	.ccs_tables_cont{
-		min-width:350px;
-		min-height:300px;
-	}
-	.ccs_table{
-		text-align: center;
-		color:inherit;
-		border:none;
-		margin-top:15px;
-		margin-bottom:15px;
-		min-width:inherit;
-		min-height:inherit;
-	}
-	.ccs_col{
-		font-size:1.2em;
-		border:2px solid transparent;
-		margin:0px;
-	}
-	.ccs_col:hover{
-		border:2px solid #bcbcbc;
-	}
-	.ccs_col_oor{
-		color: #bfbfbf;
-	}
-	.ccs_col_selected{
-		background-color:rgba(0,0,0,.2);
-	}
-	.ccs_controls{
-		display:block;
-	}
-	.ccs_controls p{
-		display:inline-block;
-		padding:0px;
-		margin:0px;
-	}
-	.ccs_control{
-		color:#ddd;
-	}
-	.ccs_control:hover{
-		color:#eee;
-	}
-	.ccs_back{
-		float:left;
-		padding-left:10px;
-	}
-	.ccs_up, .ccs_down{
-		display:inline-block;
-		float:right;
-	}
-	.ccs_date_today{
-		border: 2px solid black;
-	}
-	.ccs_today{
-		display:inline-block;
-		margin:10px 0px 10px 0px;
-		color:#bbb;
-		cursor:pointer;
-	}
-	.ccs_today:hover{
-		color:#ddd;
-	}
-	</style>
+	<link rel="stylesheet" href="ccs/src/ccs_style.css">
 </head>
 
 <body>
 <center>
 	<ccs name="test_cal">
-		<div class="ccs_today">Friday, Aug 5, 2016</div>
-		<div class="ccs_controls">
-			<p class="ccs_control ccs_back" onclick="a.prev();">Section</p>
-			<!-- <p onclick="a.next()">Next</p> -->
-			<p class="ccs_control ccs_down" onclick="a.scroll(1)">Down</p>
-			<p class="ccs_control ccs_up" onclick="a.scroll(-1)">Up </p>
+		<div class="ccs_datePicker">
+			<div class="ccs_today">Friday, Aug 8, 2016</div>
+			<div class="ccs_controls">
+				<p class="ccs_control ccs_back" onclick="calendar.prev();">Section</p>
+				<!-- <p onclick="calendar.next()">Next</p> -->
+				<p class="ccs_control ccs_down" onclick="calendar.scroll(1)">Down</p>
+				<p class="ccs_control ccs_up" onclick="calendar.scroll(-1)">Up </p>
+			</div>
 		</div>
 	</ccs>
-	<div>
-		<p> Selected: <span id="selection"> </span> </p>
-	</div>
 </center>
-	<script src='ccs/build/ccs.min.js'></script>
+	<script src='ccs/build/ccs.js'></script>
 
 	<script>
-		var a = CCS.create();
-		var views = a.views;
+		var calendar = CCS.create({
+			selector: ".ccs_datePicker"
+		    /*start: {
+		        date: "06/18/2017"
+		    }*/
+		});
+		var views = calendar.views;
 	</script>
 
 </body>

@@ -4,20 +4,24 @@ module.exports = (function() {
     var CalSection = require('./calsection');
     var events = require('./events');
     var utils = require('../utils/utils');
+    var templates = require('./templates');
 
     var ccs = function(o) {
         //local settings
         if (typeof o != 'object') o = {};
         this.configs = {
             show: {
-                today: true,
-                daysOfWeek: true,
-                doneButton: true,
-                animations: true,
+                today: true, //today's date
+                limit: true,
+                daysOfWeek: true, //days of the week table head
+                doneButton: true, //a 'done' button
+                animations: true, //calendar view switch animations
+                jumpTo: true, //a search box allowing  one to jump to a particular date
                 //to be implemented later
                 settings: false,
                 multiToggler: false
             },
+            limit: Infinity,
             selector: 'ccs',
             name: null,
             order: null,
@@ -57,11 +61,7 @@ module.exports = (function() {
         this.year = null;
         this.month = null;
         this.day = null;
-        this.selections = [{
-            start: null,
-            end: null,
-            color: null
-        }];
+        this.selections = [];
         this.config(o)
         init.call(this);
     }
@@ -83,9 +83,19 @@ module.exports = (function() {
         */
         prev: prev,
         /**
-            scroll the current view
+            scroll the current view up or downw
         */
         scroll: scroll,
+
+        gotoDate: null,
+
+        addSelection: addSelection,
+
+        removeSelection: removeSelection,
+
+        getSelected: getSelected,
+
+        selections: null
     }
 
     function config(o) {
@@ -113,35 +123,33 @@ module.exports = (function() {
                 cols: 4,
                 rows: 4,
                 format: "YYYY",
-                start_date: start_date.clone().startOf('year'),
-                start_of: ["year"],
-                range_start: start_date.clone(),
-                range_end: start_date.clone().add(10, 'years')
+                start_date: [start_date.clone(), ["year"]],
+                range_start: [start_date.clone(), ["year"]],
+                range_end: [start_date.clone(), [10, "years"]]
             }),
             months = new CalSection({
                 section: "months",
                 cols: 4,
                 rows: 4,
                 format: "MMM",
-                start_date: start_date.clone().startOf('month'),
-                start_of: ["month"],
-                range_start: start_date.clone().startOf('year'),
-                range_end: start_date.clone().endOf('year')
+                start_date: [start_date.clone(), ["month"]],
+                range_start: [start_date.clone(), ["year"]],
+                range_end: [start_date.clone(), ["year"]]
             }),
             days = new CalSection({
                 section: "days",
                 cols: 7,
                 rows: 6,
                 format: "D",
-                start_date: start_date.clone(),
-                start_of: ["month","week"],
-                range_start: start_date.clone().startOf('month'),
-                range_end: start_date.clone().endOf('month')
+                start_date: [start_date.clone(), ["month", "week"]],
+                range_start: [start_date.clone(), ["month"]],
+                range_end: [start_date.clone(), ["month"]]
             });
-
+        //this entire section needs fixing
         events.add(this, years.view, months.view, days.view);
         var table_root = document.createElement('div');
         root_el.appendChild(table_root);
+        root_el.parentNode.appendChild(templates.side_bar());
         table_root.classList.add("ccs_tables_cont");
         years.appendTo(table_root);
         months.appendTo(table_root);
@@ -151,6 +159,7 @@ module.exports = (function() {
             0: years,
             1: months,
             2: days,
+            order: [years, months, days],
             curr: 0
         };
         this.switchTo(this.configs.start.section);
@@ -178,27 +187,27 @@ module.exports = (function() {
 
     function next(date) {
         var curr = this.sections[this.sections.curr],
-            sect = this.sections[this.sections.curr+1];
+            sect = this.sections[this.sections.curr + 1];
         if (sect) {
             this.sections.curr++;
-            if(date){
+            if (date) {
                 sect.gotoDate(date);
             }
-            curr.fadeOut(function(){
+            curr.fadeOut(function() {
                 sect.fadeIn(null, true);
-            },true);
+            }, true);
         }
     }
 
     function prev(date) {
         var curr = this.sections[this.sections.curr],
-            sect = this.sections[this.sections.curr-1];
+            sect = this.sections[this.sections.curr - 1];
         if (sect) {
             this.sections.curr--;
-            if(date){
+            if (date) {
                 sect.gotoDate(date);
             }
-            curr.fadeOut(function(){
+            curr.fadeOut(function() {
                 sect.fadeIn();
             });
         }
@@ -207,6 +216,38 @@ module.exports = (function() {
     function scroll(amnt) {
         this.sections[this.sections.curr].scroll(amnt);
         return this;
+    }
+
+    function addSelection(date) {
+        var mmnt = Moment(date);
+        if (!this.getSelected(mmnt)) {
+            this.selections.push(mmnt);
+            return true;
+        }
+        return false;
+    }
+
+    function removeSelection(date) {
+        var mmnt = Moment(date);
+        var selection = this.getSelected(mmnt)
+        if (selection) {
+            this.selections.splice(selection.index,1);
+            return true;
+        }
+        return false;
+    }
+
+    function getSelected(date) {
+        var mmnt = Moment(date);
+        for (var i = 0; i < this.selections.length; i++) {
+            if (this.selections[i].isSame(mmnt)) {
+                return {
+                    date: this.selections[i],
+                    index: i
+                };
+            }
+        }
+        return false;
     }
 
     return ccs;

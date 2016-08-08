@@ -3,22 +3,47 @@
     var moment = require('moment');
     generate = utils.generate;
 
-    function dateInRange(date, start, end){
+    function dateInRange(date, start, end) {
         var date = moment(date);
         return date.isBetween(start, end, null, '[]');
     }
 
+    function getStartOf(date, ranges) {
+        if (ranges) {
+            for (var i = 0; i < ranges.length; i++) {
+                date = date.startOf(ranges[i]);
+            }
+        }
+        return date;
+    }
+
+    function getEndOf(date, ranges) {
+        if (ranges) {
+            for (var i = 0; i < ranges.length; i++) {
+                if (typeof ranges[i] == "number") {
+                    date = date.add(ranges[i], ranges[i + 1]);
+                    return date;
+                } else {
+                    date = date.endOf(ranges[i]);
+                }
+            }
+        }
+        return date;
+    }
     //var CalSection = function(type, ccs, prev) {
     var CalSection = function(p) {
         this.section = p.section;
+        this.cal = p.cal;
         this.format = p.format;
         this.rows = p.rows || 1;
         this.cols = p.cols || 1;
-        this.start_date = p.start_date || moment();
-        
+        this.start_date = p.start_date[0] || moment();
+        this.start_of = p.start_date[1] || [];
         this.range = {
-            start: p.range_start || null,
-            end: p.range_end || null
+            start: getStartOf(p.range_start[0], p.range_start[1]),
+            end: getEndOf(p.range_end[0], p.range_end[1]),
+            start_getter: p.range_start[1],
+            end_getter: p.range_end[1]
         }
 
         this.pointers = {
@@ -79,7 +104,7 @@
             transform: ["scale(1)", "scale(" + (t ? 1.25 : .75) + ")"]
         }, {
             duration: 150,
-            easing: "ease-out",
+            easing: "ease-in-out",
         });
         player.onfinish = function() {
             self.display(false);
@@ -99,7 +124,7 @@
             transform: ["scale(" + (t ? .75 : 1.25) + ")", "scale(1)"]
         }, {
             duration: 150,
-            easing: "ease-out",
+            easing: "ease-in-out",
         });
         player.onfinish = function() {
             try {
@@ -122,12 +147,12 @@
                 this.pointers.start.subtract(1, this.section);
                 this.pointers.end.subtract(1, this.section);
                 doc.innerHTML = this.pointers.start.format(this.format);
-                if(!dateInRange(this.pointers.start, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+                if (!dateInRange(this.pointers.start, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
                 doc.id = this.pointers.start.format();
             } else {
                 doc.innerHTML = this.pointers.end.format(this.format);
                 doc.id = this.pointers.end.format();
-                if(!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+                if (!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
                 this.pointers.start.add(1, this.section);
                 this.pointers.end.add(1, this.section);
             }
@@ -151,8 +176,10 @@
     */
     function gotoDate(mmnt, animate, anim_type) {
         var date = moment(mmnt);
+        this.range.start = getStartOf(date.clone(),this.range.start_getter);
+        this.range.end = getEndOf(date.clone(),this.range.end_getter);
         //edge case
-        if (this.section == 'days') date = date.startOf('month').startOf('week');
+        date = getStartOf(date, this.start_of);
         this.pointers.start = date.clone();
         this.pointers.end = date.clone();
         var rows = generate.rows(this.cols, this.rows, "ccs_col ccs_col_" + this.section, "ccs_row ccs_row_" + this.section);
@@ -162,13 +189,12 @@
         for (var i = 0; i < rows.rows.length; i++) {
             this.table.body.appendChild(rows.rows[i]);
         }
-
         var doc;
         for (var i = 0; i < rows.docs.length; i++) {
             doc = rows.docs[i];
             doc.id = this.pointers.end.format();
             doc.innerHTML = this.pointers.end.format(this.format);
-            if(!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+            if (!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
             this.pointers.end.add(1, this.section);
         }
     }

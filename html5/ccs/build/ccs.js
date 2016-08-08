@@ -40,22 +40,47 @@ module.exports = (function() {
     var moment = require('moment');
     generate = utils.generate;
 
-    function dateInRange(date, start, end){
+    function dateInRange(date, start, end) {
         var date = moment(date);
         return date.isBetween(start, end, null, '[]');
     }
 
+    function getStartOf(date, ranges) {
+        if (ranges) {
+            for (var i = 0; i < ranges.length; i++) {
+                date = date.startOf(ranges[i]);
+            }
+        }
+        return date;
+    }
+
+    function getEndOf(date, ranges) {
+        if (ranges) {
+            for (var i = 0; i < ranges.length; i++) {
+                if (typeof ranges[i] == "number") {
+                    date = date.add(ranges[i], ranges[i + 1]);
+                    return date;
+                } else {
+                    date = date.endOf(ranges[i]);
+                }
+            }
+        }
+        return date;
+    }
     //var CalSection = function(type, ccs, prev) {
     var CalSection = function(p) {
         this.section = p.section;
+        this.cal = p.cal;
         this.format = p.format;
         this.rows = p.rows || 1;
         this.cols = p.cols || 1;
-        this.start_date = p.start_date || moment();
-        
+        this.start_date = p.start_date[0] || moment();
+        this.start_of = p.start_date[1] || [];
         this.range = {
-            start: p.range_start || null,
-            end: p.range_end || null
+            start: getStartOf(p.range_start[0], p.range_start[1]),
+            end: getEndOf(p.range_end[0], p.range_end[1]),
+            start_getter: p.range_start[1],
+            end_getter: p.range_end[1]
         }
 
         this.pointers = {
@@ -116,7 +141,7 @@ module.exports = (function() {
             transform: ["scale(1)", "scale(" + (t ? 1.25 : .75) + ")"]
         }, {
             duration: 150,
-            easing: "ease-out",
+            easing: "ease-in-out",
         });
         player.onfinish = function() {
             self.display(false);
@@ -136,7 +161,7 @@ module.exports = (function() {
             transform: ["scale(" + (t ? .75 : 1.25) + ")", "scale(1)"]
         }, {
             duration: 150,
-            easing: "ease-out",
+            easing: "ease-in-out",
         });
         player.onfinish = function() {
             try {
@@ -159,12 +184,12 @@ module.exports = (function() {
                 this.pointers.start.subtract(1, this.section);
                 this.pointers.end.subtract(1, this.section);
                 doc.innerHTML = this.pointers.start.format(this.format);
-                if(!dateInRange(this.pointers.start, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+                if (!dateInRange(this.pointers.start, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
                 doc.id = this.pointers.start.format();
             } else {
                 doc.innerHTML = this.pointers.end.format(this.format);
                 doc.id = this.pointers.end.format();
-                if(!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+                if (!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
                 this.pointers.start.add(1, this.section);
                 this.pointers.end.add(1, this.section);
             }
@@ -188,8 +213,10 @@ module.exports = (function() {
     */
     function gotoDate(mmnt, animate, anim_type) {
         var date = moment(mmnt);
+        this.range.start = getStartOf(date.clone(),this.range.start_getter);
+        this.range.end = getEndOf(date.clone(),this.range.end_getter);
         //edge case
-        if (this.section == 'days') date = date.startOf('month').startOf('week');
+        date = getStartOf(date, this.start_of);
         this.pointers.start = date.clone();
         this.pointers.end = date.clone();
         var rows = generate.rows(this.cols, this.rows, "ccs_col ccs_col_" + this.section, "ccs_row ccs_row_" + this.section);
@@ -199,13 +226,12 @@ module.exports = (function() {
         for (var i = 0; i < rows.rows.length; i++) {
             this.table.body.appendChild(rows.rows[i]);
         }
-
         var doc;
         for (var i = 0; i < rows.docs.length; i++) {
             doc = rows.docs[i];
             doc.id = this.pointers.end.format();
             doc.innerHTML = this.pointers.end.format(this.format);
-            if(!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+            if (!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
             this.pointers.end.add(1, this.section);
         }
     }
@@ -219,20 +245,24 @@ module.exports = (function() {
     var CalSection = require('./calsection');
     var events = require('./events');
     var utils = require('../utils/utils');
+    var templates = require('./templates');
 
     var ccs = function(o) {
         //local settings
         if (typeof o != 'object') o = {};
         this.configs = {
             show: {
-                today: true,
-                daysOfWeek: true,
-                doneButton: true,
-                animations: true,
+                today: true, //today's date
+                limit: true,
+                daysOfWeek: true, //days of the week table head
+                doneButton: true, //a 'done' button
+                animations: true, //calendar view switch animations
+                jumpTo: true, //a search box allowing  one to jump to a particular date
                 //to be implemented later
                 settings: false,
                 multiToggler: false
             },
+            limit: Infinity,
             selector: 'ccs',
             name: null,
             order: null,
@@ -272,11 +302,7 @@ module.exports = (function() {
         this.year = null;
         this.month = null;
         this.day = null;
-        this.selections = [{
-            start: null,
-            end: null,
-            color: null
-        }];
+        this.selections = [];
         this.config(o)
         init.call(this);
     }
@@ -298,9 +324,19 @@ module.exports = (function() {
         */
         prev: prev,
         /**
-            scroll the current view
+            scroll the current view up or downw
         */
         scroll: scroll,
+
+        gotoDate: null,
+
+        addSelection: addSelection,
+
+        removeSelection: removeSelection,
+
+        getSelected: getSelected,
+
+        selections: null
     }
 
     function config(o) {
@@ -328,35 +364,33 @@ module.exports = (function() {
                 cols: 4,
                 rows: 4,
                 format: "YYYY",
-                start_date: start_date.clone().startOf('year'),
-                start_of: ["year"],
-                range_start: start_date.clone(),
-                range_end: start_date.clone().add(10, 'years')
+                start_date: [start_date.clone(), ["year"]],
+                range_start: [start_date.clone(), ["year"]],
+                range_end: [start_date.clone(), [10, "years"]]
             }),
             months = new CalSection({
                 section: "months",
                 cols: 4,
                 rows: 4,
                 format: "MMM",
-                start_date: start_date.clone().startOf('month'),
-                start_of: ["month"],
-                range_start: start_date.clone().startOf('year'),
-                range_end: start_date.clone().endOf('year')
+                start_date: [start_date.clone(), ["month"]],
+                range_start: [start_date.clone(), ["year"]],
+                range_end: [start_date.clone(), ["year"]]
             }),
             days = new CalSection({
                 section: "days",
                 cols: 7,
                 rows: 6,
                 format: "D",
-                start_date: start_date.clone(),
-                start_of: ["month","week"],
-                range_start: start_date.clone().startOf('month'),
-                range_end: start_date.clone().endOf('month')
+                start_date: [start_date.clone(), ["month", "week"]],
+                range_start: [start_date.clone(), ["month"]],
+                range_end: [start_date.clone(), ["month"]]
             });
-
+        //this entire section needs fixing
         events.add(this, years.view, months.view, days.view);
         var table_root = document.createElement('div');
         root_el.appendChild(table_root);
+        root_el.parentNode.appendChild(templates.side_bar());
         table_root.classList.add("ccs_tables_cont");
         years.appendTo(table_root);
         months.appendTo(table_root);
@@ -366,6 +400,7 @@ module.exports = (function() {
             0: years,
             1: months,
             2: days,
+            order: [years, months, days],
             curr: 0
         };
         this.switchTo(this.configs.start.section);
@@ -393,27 +428,27 @@ module.exports = (function() {
 
     function next(date) {
         var curr = this.sections[this.sections.curr],
-            sect = this.sections[this.sections.curr+1];
+            sect = this.sections[this.sections.curr + 1];
         if (sect) {
             this.sections.curr++;
-            if(date){
+            if (date) {
                 sect.gotoDate(date);
             }
-            curr.fadeOut(function(){
+            curr.fadeOut(function() {
                 sect.fadeIn(null, true);
-            },true);
+            }, true);
         }
     }
 
     function prev(date) {
         var curr = this.sections[this.sections.curr],
-            sect = this.sections[this.sections.curr-1];
+            sect = this.sections[this.sections.curr - 1];
         if (sect) {
             this.sections.curr--;
-            if(date){
+            if (date) {
                 sect.gotoDate(date);
             }
-            curr.fadeOut(function(){
+            curr.fadeOut(function() {
                 sect.fadeIn();
             });
         }
@@ -424,11 +459,43 @@ module.exports = (function() {
         return this;
     }
 
+    function addSelection(date) {
+        var mmnt = Moment(date);
+        if (!this.getSelected(mmnt)) {
+            this.selections.push(mmnt);
+            return true;
+        }
+        return false;
+    }
+
+    function removeSelection(date) {
+        var mmnt = Moment(date);
+        var selection = this.getSelected(mmnt)
+        if (selection) {
+            this.selections.splice(selection.index,1);
+            return true;
+        }
+        return false;
+    }
+
+    function getSelected(date) {
+        var mmnt = Moment(date);
+        for (var i = 0; i < this.selections.length; i++) {
+            if (this.selections[i].isSame(mmnt)) {
+                return {
+                    date: this.selections[i],
+                    index: i
+                };
+            }
+        }
+        return false;
+    }
+
     return ccs;
 })();
-},{"../utils/utils":9,"./calsection":3,"./events":5,"moment":10}],5:[function(require,module,exports){
+},{"../utils/utils":9,"./calsection":3,"./events":5,"./templates":6,"moment":10}],5:[function(require,module,exports){
 (function() {
-	var Moment = require('moment');
+    var Moment = require('moment');
     var events = {
         onSelect: [],
         onDeselect: [],
@@ -449,27 +516,31 @@ module.exports = (function() {
     }
 
     function addEvents(ccs, y, m, d) {
-    	y.addEventListener('click',function(e){
-    		//console.log(e);
-            if(!e.srcElement.classList.contains("ccs_col")) return false;
+        y.addEventListener('click', function(e) {
+            //console.log(e);
+            if (!e.srcElement.classList.contains("ccs_col")) return false;
+            //e.srcElement.classList.toggle("ccs_col_selected");
+            ccs.year = Moment(e.srcElement.id).startOf('year');
+            ccs.next(ccs.year);
+        });
+        m.addEventListener('click', function(e) {
+            //
+            if (!e.srcElement.classList.contains("ccs_col")) return false;
+            //e.srcElement.classList.toggle("ccs_col_selected");
+            ccs.month = Moment(e.srcElement.id).startOf('month');
+            ccs.next(ccs.month);
+        });
+        d.addEventListener('click', function(e) {
+            if (!e.srcElement.classList.contains("ccs_col")) return false;
             e.srcElement.classList.toggle("ccs_col_selected");
-    		ccs.year = Moment(e.srcElement.id).startOf('year');
-    		ccs.next(ccs.year);
-    	});
-    	m.addEventListener('click', function(e){
-    		//
-            if(!e.srcElement.classList.contains("ccs_col")) return false;
-            e.srcElement.classList.toggle("ccs_col_selected");
-    		ccs.month = Moment(e.srcElement.id).startOf('month');
-    		ccs.next(ccs.month);
-    	});
-    	d.addEventListener('click',function(e){
-            if(!e.srcElement.classList.contains("ccs_col")) return false;
-            e.srcElement.classList.toggle("ccs_col_selected");
-    		ccs.day = Moment(e.srcElement.id);
-    		document.querySelector("#selection").innerHTML = ccs.day.format("dddd, MMM D, YYYY");
-    		ccs.next(ccs.day);
-    	});
+            ccs.day = Moment(e.srcElement.id);
+            if (e.srcElement.classList.contains('ccs_col_selected')) {
+                ccs.addSelection(ccs.day);
+            }else{
+                ccs.removeSelection(ccs.day);
+            }
+            ccs.next(ccs.day);
+        });
     }
 
     module.exports = {
@@ -483,6 +554,7 @@ module.exports = (function() {
 (function() {
     module.exports = {
         header: generateHeader,
+        side_bar: generateSidebar,
         footer: generateFooter,
         days_head: generateDaysHeader,
     }
@@ -502,11 +574,17 @@ module.exports = (function() {
         return head;
     }
 
+    function generateSidebar() {
+        var div = document.createElement('div');
+        div.classList.add("ccs_sidebar");
+        return div;
+    }
+
     function generateFooter() {
-    	var div = docoment.createElement('div');
-    	div.classList.add("ccs_footer");
-    	//add finished button
-    	return div;
+        var div = document.createElement('div');
+        div.classList.add("ccs_footer");
+        //add finished button
+        return div;
     }
 
     function generateHeader() {
