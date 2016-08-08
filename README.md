@@ -4,7 +4,7 @@ The Cascading Calendar Selector (CCS) is a method of streamlining date and time 
 ## Set it up
 Include the CSS and Javascript files:
 ```html
-<link rel="/path/to/ccs_style.css">
+<link href="/path/to/ccs_style.css" rel="stylesheet">
 <script src="/path/to/ccs.js"></script>
 ```
 Create the root element in which the calendar will be appended (defaults to "ccs")
@@ -17,3 +17,6 @@ var cal = CCS.create({...});
 //or
 var cal = CCS.create().config({...});
 ```
+## Configurations
+
+## Events
