@@ -22,7 +22,7 @@ var cal = CCS.create({...});
 var cal = CCS.create().config({...});
 ```
 ## Configurations
-```json
+```javascript
 //pass these into the configurations
 show: {
 	today: Boolean, //today's date
