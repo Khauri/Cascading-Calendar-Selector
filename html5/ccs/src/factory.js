@@ -14,8 +14,9 @@ module.exports = (function() {
         config: config
     }
 
-    function config() {
-
+    function config(o){
+        utils.extend(this.configs, o);
+        return this;
     }
 
     function create(options) {

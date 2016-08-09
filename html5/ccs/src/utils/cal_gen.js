@@ -1,5 +1,4 @@
 (function() {
-    var events = require('../lib/events');
     var templates = require('../lib/templates')
     /* The real question is: which is faster, generating via this small template engine
         or manually generating everything? The world may never know...*/

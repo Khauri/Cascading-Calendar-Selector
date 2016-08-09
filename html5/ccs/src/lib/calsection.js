@@ -1,6 +1,5 @@
 (function() {
     var utils = require('../utils/utils');
-    var moment = require('moment');
     generate = utils.generate;
 
     function dateInRange(date, start, end) {
@@ -73,6 +72,7 @@
         display: display,
 
         fadeOut: fadeOut,
+        
         fadeIn: fadeIn,
         /**
             scroll this section of the calendar up or down

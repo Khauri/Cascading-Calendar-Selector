@@ -4,27 +4,19 @@
 
 <body>
 <center>
-	<ccs name="test_cal">
-		<!--<div class="ccs_datePicker">
-			<div class="ccs_today">Friday, Aug 8, 2016</div>
-			<div class="ccs_controls">
-				<p class="ccs_control ccs_back" onclick="calendar.prev();">Section</p>
-				<p class="ccs_control ccs_down" onclick="calendar.scroll(1)">Down</p>
-				<p class="ccs_control ccs_up" onclick="calendar.scroll(-1)">Up </p>
-			</div>
-		</div>
-		-->
-	</ccs>
+	<ccs name="test_cal"></ccs>
 </center>
+	<script src='moment.min.js'></script>
 	<script src='ccs/build/ccs.js'></script>
 
 	<script>
-		var calendar = CCS.create({
-		    /*start: {
-		        date: "06/18/2017"
-		    }*/
-		});
-		var views = calendar.views;
+		var calendar = CCS.create()
+		    .on('select', function(e) {
+		    	console.log(e);
+		    })
+		    .on('deselect', function(e) {
+		    	console.log(e);
+		    });
 	</script>
 
 </body>

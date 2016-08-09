@@ -1,10 +1,9 @@
 module.exports = (function() {
     //require modules
-    var Moment = require('moment');
-    var CalSection = require('./calsection');
-    var events = require('./events');
     var utils = require('../utils/utils');
+    var CalSection = require('./calsection');
     var templates = require('./templates');
+    var events = require('./events');
 
     var ccs = function(o) {
         //local settings
@@ -35,13 +34,12 @@ module.exports = (function() {
                 minWidth: 720,
                 minHeight: 400
             },
-            range: {
-                start: Moment().startOf('year'),
-                end: Moment().endOf('year')
-            },
             years: {
                 selectable: true,
-                radius: 100 //200 years
+                range:{
+                    start: moment().subtract(100, "years"),
+                    end: moment().add(100, "years")
+                } //200 years
             },
             months: {
                 selectable: true,
@@ -55,11 +53,11 @@ module.exports = (function() {
                 selectable: false,
             },
             start: {
-                date: Moment(),
+                date: moment(),
                 section: 'days'
             }
         }
-        this.today = Moment();
+        this.today = moment();
         this.selections = [];
         this.config(o)
         init.call(this);
@@ -96,17 +94,14 @@ module.exports = (function() {
 
         getSelected: getSelected,
 
-        selections: null
+        on: events.on,
+
+        off: events.off,
     }
 
     function config(o) {
         if (typeof o == 'object') {
             utils.extend(this.configs, o);
-            var range = this.configs.range,
-                start = this.configs.start;
-            range.start = Moment(range.start);
-            range.end = Moment(range.end);
-            start.date = Moment(start.date);
         }
         return this;
     }
@@ -163,7 +158,7 @@ module.exports = (function() {
         months.appendTo(table_root);
         days.appendTo(table_root);
         //turn on optional features
-        this.templated.findById("today").root.innerHTML = Moment().format("dddd, MMM D, YYYY");
+        this.templated.findById("today").root.innerHTML = moment().format("dddd, MMM D, YYYY");
         this.templated.findById("up").root.innerHTML = "Up";
         this.templated.findById("down").root.innerHTML = "Down";
         this.templated.findById("back").root.innerHTML = "Back";
@@ -178,7 +173,7 @@ module.exports = (function() {
         this.switchTo(this.configs.start.section);
 
         this.view = root_el;
-        
+
         //add events and such
         events.add(this);
         var t2 = performance.now();
@@ -270,7 +265,7 @@ module.exports = (function() {
     }
 
     function addSelection(date) {
-        var mmnt = Moment(date);
+        var mmnt = moment(date);
         if (!this.getSelected(mmnt)) {
             this.selections.push(mmnt);
             this.update();
@@ -280,7 +275,7 @@ module.exports = (function() {
     }
 
     function removeSelection(date) {
-        var mmnt = Moment(date);
+        var mmnt = moment(date);
         var selection = this.getSelected(mmnt)
         if (selection) {
             this.selections.splice(selection.index, 1);
@@ -291,7 +286,7 @@ module.exports = (function() {
     }
 
     function getSelected(date) {
-        var mmnt = Moment(date);
+        var mmnt = moment(date);
         for (var i = 0; i < this.selections.length; i++) {
             if (this.selections[i].isSame(mmnt)) {
                 return {
