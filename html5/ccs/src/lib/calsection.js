@@ -72,7 +72,7 @@
         display: display,
 
         fadeOut: fadeOut,
-        
+
         fadeIn: fadeIn,
         /**
             scroll this section of the calendar up or down

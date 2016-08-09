@@ -26,26 +26,26 @@ var cal = CCS.create().config({...});
 //pass these into the configurations
 show: {
 	today: Boolean, //today's date
-	limit: Boolean,
+	limit: Boolean, //amount of dates able to be chosen
 	daysOfWeek: Boolean, //days of the week table head
-	doneButton: Boolean, //a 'done' button
+	doneButton: Boolean, //the 'done' button
 	animations: Boolean, //calendar view switch animations
 	jumpTo: Boolean, //a search box allowing  one to jump to a particular date
-	border: Boolean,
-	background: Boolean,
-	settings: Boolean,
-	multiToggler: Boolean
+	border: Boolean, //border around the table
+	background: Boolean, //enable or disable the background
+	settings: Boolean, //show settings toggle/module
+	multiToggler: Boolean //
 },
-limit: Number,
-selector: String,
-name: String,
+limit: Number, //the number of dates able to be chosen
+selector: String, //
+name: String, //the name to display on the table, if any
 order: String,
 smoothScroll: Boolean,
 years: {
     selectable: Boolean,
     range:{
-        start: Moment | String | Number,
-        end: Moment | String | Number
+        start: moment*,
+        end: moment*
     }
 },
 months: {
@@ -60,10 +60,11 @@ time: {
     selectable: Boolean,
 },
 start: {
-    date: Moment | String | Number,
+    date: moment*,
     section: String
 }
 ```
+*Any value you can pass into a moment object may be passed here such as a Date, String, Number, or moment. See momentjs docs for more information.
 ## Methods
 ```javascript
 
