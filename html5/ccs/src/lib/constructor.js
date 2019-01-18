@@ -6,7 +6,8 @@ module.exports = (function() {
     var events = require('./events');
 
     var ccs = function(o) {
-        //local settings
+        var t0 = performance.now();
+        //begin initalization
         if (typeof o != 'object') o = {};
         this.configs = {
             show: {
@@ -26,9 +27,6 @@ module.exports = (function() {
             selector: 'ccs',
             name: null,
             order: null,
-            //setting smoothScroll to true will add a touch event
-            //that generates excess rows and allows traversal by
-            //scroll bar
             smoothScroll: true, //not implemented in this version probably
             style: {
                 minWidth: 720,
@@ -36,7 +34,7 @@ module.exports = (function() {
             },
             years: {
                 selectable: true,
-                range:{
+                range: {
                     start: moment().subtract(100, "years"),
                     end: moment().add(100, "years")
                 } //200 years
@@ -57,10 +55,19 @@ module.exports = (function() {
                 section: 'days'
             }
         }
+
         this.today = moment();
+
         this.selections = [];
+
         this.config(o)
+
         init.call(this);
+        //end initialization
+        var t1 = performance.now();
+        //time to initialization
+        this.tti = t1-t0;
+        console.log("Time to initialize: ~"+ Math.round(this.tti)+"ms");
     }
 
     ccs.prototype = {
@@ -87,15 +94,23 @@ module.exports = (function() {
         goto: go,
 
         addSelection: addSelection,
-
+        /**
+            TODO: Remake the calendar based on new configurations
+         */
         update: update,
 
         removeSelection: removeSelection,
 
         getSelected: getSelected,
 
+        currentView: currV,
+        /**
+            Adds an event handler
+        */
         on: events.on,
-
+        /**
+            Removes an event handler
+        */
         off: events.off,
     }
 
@@ -108,13 +123,12 @@ module.exports = (function() {
 
     function init() {
         var self = this;
-        // create all the shit
-        // this should only be run one time probably
-        var t0 = performance.now();
+        /* create all the shit
+          this should only be run one time probably, whch
+          is why it's not a method of the constructor
+        */
         this.templated = utils.generate.calendar();
-        var t1 = performance.now();
-        console.log("template generated in " + (t1 - t0) + " milliseconds");
-
+        
         var root_el = document.querySelector(this.configs.selector);
 
         if (!root_el) root_el = document.createElement('ccs');
@@ -133,7 +147,7 @@ module.exports = (function() {
                 range_end: [start_date.clone(), [10, "years"]]
             }),
             months = new CalSection({
-                cal :self,
+                cal: self,
                 section: "months",
                 cols: 4,
                 rows: 4,
@@ -143,11 +157,12 @@ module.exports = (function() {
                 range_end: [start_date.clone(), ["year"]]
             }),
             days = new CalSection({
-                cal : self,
+                cal: self,
                 section: "days",
                 cols: 7,
                 rows: 6,
                 format: "D",
+                trackSelected: true,
                 start_date: [start_date.clone(), ["month", "week"]],
                 range_start: [start_date.clone(), ["month"]],
                 range_end: [start_date.clone(), ["month"]]
@@ -170,14 +185,14 @@ module.exports = (function() {
             order: [years, months, days],
             curr: 0
         };
+
+        this.sectionStack = [];
         this.switchTo(this.configs.start.section);
 
         this.view = root_el;
 
         //add events and such
         events.add(this);
-        var t2 = performance.now();
-        console.log("initialization complete in " + (t2 - t0) + " milliseconds");
 
         return this;
     }
@@ -198,12 +213,16 @@ module.exports = (function() {
         }
     }
 
+    function currV() {
+        return this.sections[this.sections.curr];
+    }
+
     function switchTo(v, hide) {
         var i = 0,
             curr = this.sections[i];
         while (curr) {
             if (curr.section.toLowerCase() == v.toLowerCase()) {
-                if(!hide) curr.display(true);
+                if (!hide) curr.display(true);
                 this.sections.curr = i;
             } else {
                 curr.display(false);
@@ -214,18 +233,19 @@ module.exports = (function() {
         return this;
     }
 
-    function go(date, section, animate){
+    function go(date, section, animate) {
         var self = this;
-        function switchIt(){
-            if(section) self.switchTo(section, true);
+
+        function switchIt() {
+            if (section) self.switchTo(section, true);
             self.sections[self.sections.curr].gotoDate(date);
-            if(animate){
+            if (animate) {
                 self.sections[self.sections.curr].fadeIn(null, true);
             }
         }
-        if(animate){
+        if (animate) {
             this.sections[this.sections.curr].fadeOut(switchIt, true);
-        }else{
+        } else {
             switchIt();
         }
         return this;

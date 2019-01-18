@@ -79,7 +79,9 @@
         this function needs more comments probably lmao
      */
     function addEvents(ccs) {
-        var root_el = ccs.templated.root;
+        var dragging = false,
+            start_el, selected, docs;
+        var root_el = ccs.templated.root.parentNode;
         root_el.addEventListener('click', function(e) {
             src_el = e.target || e.srcElement;
             /*
@@ -87,29 +89,13 @@
                 such as the days, years, and months
              */
             if (hasClass(src_el, "ccs_col")) {
-                if (hasClass(src_el, "ccs_col_days")) {
-                    src_el.classList.toggle("ccs_col_selected");
-                    var day = moment(e.srcElement.id);
-                    if (hasClass(src_el, 'ccs_col_selected')) {
-                        runEvents('select', {
-                            selection: day
-                        });
-                        ccs.addSelection(day);
-                    } else {
-                        runEvents('deselect', {
-                            selection: day
-                        });
-                        ccs.removeSelection(day);
-                    }
-                    ccs.next(day);
-                } else if (hasClass(src_el, "ccs_col_months")) {
+                if (hasClass(src_el, "ccs_col_months")) {
                     var month = moment(src_el.id).startOf('month');
                     ccs.next(month);
                 } else if (hasClass(src_el, "ccs_col_years")) {
                     var year = moment(src_el.id).startOf('year');
                     ccs.next(year);
                 }
-
             }
             /*
                 handle some of the controls
@@ -127,6 +113,62 @@
                 ccs.goto(moment(), 'days', true);
             }
             e.stopPropagation();
+        });
+        //drag over dates and such
+        root_el.addEventListener("mousedown",function(e){
+            selected = [];
+            src_el = e.target || e.srcElement;
+            if(hasClass(src_el, "ccs_col_days")){
+                docs = root_el.querySelectorAll(".ccs_col_days");
+                src_el.classList.toggle("ccs_col_selected");
+                start_el = src_el;
+                dragging = true;
+            }
+        });
+        root_el.addEventListener("mouseup",function(e){
+            if(!dragging) return false;
+            if (hasClass(src_el, "ccs_col_days")) {
+                var day = moment(e.srcElement.id);
+                if (hasClass(src_el, 'ccs_col_selected')) {
+                    runEvents('select', {
+                        //selection: day
+                    });
+                    ccs.addSelection(day);
+                } else {
+                    runEvents('deselect', {
+                        //selection: day
+                    });
+                    ccs.removeSelection(day);
+                }
+                ccs.next(day);
+                dragging = false;
+            }
+        });
+
+        root_el.addEventListener("mousemove",function(e){
+            src_el = e.target || e.srcElement;
+            if(src_el == start_el || !dragging) return false;
+            if(hasClass(src_el, "ccs_col_days")){
+                //get all td between this one and start_el
+                var populating = false, 
+                    doc;
+                for(var i=0;i<docs.length;i++){
+                    doc = docs[i];
+                    if(doc == src_el || doc == start_el){
+                        populating = !populating;
+                    }
+                    if(populating){
+                        if(start_el.classList.contains("ccs_col_selected")){
+                            doc.classList.add("ccs_col_selected");
+                        }else{
+                            doc.classList.remove("ccs_col_selected");
+                        }//doc.classList.toggle("ccs_col_selected");
+                    }else{
+                        doc.classList.remove("ccs_col_selected");
+                    }
+                }
+
+            }
         });
     }
 })();

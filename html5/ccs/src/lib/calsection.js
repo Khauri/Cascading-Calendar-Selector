@@ -38,6 +38,7 @@
         this.cols = p.cols || 1;
         this.start_date = p.start_date[0] || moment();
         this.start_of = p.start_date[1] || [];
+        this.trackSelected = p.trackSelected || false;
         this.range = {
             start: getStartOf(p.range_start[0], p.range_start[1]),
             end: getEndOf(p.range_end[0], p.range_end[1]),
@@ -148,11 +149,13 @@
                 this.pointers.end.subtract(1, this.section);
                 doc.innerHTML = this.pointers.start.format(this.format);
                 if (!dateInRange(this.pointers.start, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+                if(this.trackSelected && this.cal.getSelected(this.pointers.start)) doc.classList.add("ccs_col_selected");
                 doc.id = this.pointers.start.format();
             } else {
                 doc.innerHTML = this.pointers.end.format(this.format);
                 doc.id = this.pointers.end.format();
                 if (!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+                if(this.trackSelected && this.cal.getSelected(this.pointers.end)) doc.classList.add("ccs_col_selected");
                 this.pointers.start.add(1, this.section);
                 this.pointers.end.add(1, this.section);
             }
@@ -195,6 +198,7 @@
             doc.id = this.pointers.end.format();
             doc.innerHTML = this.pointers.end.format(this.format);
             if (!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+            if(this.trackSelected && this.cal.getSelected(date)) doc.classList.add("ccs_col_selected");
             this.pointers.end.add(1, this.section);
         }
     }

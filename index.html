@@ -1,0 +1,51 @@
+<head>
+	<link rel="stylesheet" href="html5/ccs/src/ccs_style.css">
+	<style>
+		body{
+			padding-top:20px;
+			margin:0px;
+			background-color:#2e2e44;
+			color:white;
+			font-family:arial;
+		}
+		.ccsBox{
+			display: flex;
+			flex-direction:row;
+			flex-wrap:wrap;
+			justify-content:space-around;
+		}
+		.hero{
+			padding:20px;
+			text-align:center;
+		}
+	</style>
+</head>
+
+<body>
+	<p style="text-align: center; position: static;color:rgb(230,15,15);background-color:rgba(255,255,255,.98); padding:10px; font-size:1.25em;">*Still in a very early state and also hella buggy*</p>
+	<div class="hero">
+		
+	</div>
+	<div class="ccsBox">
+		<ccs name="test_cal"></ccs>
+		<div class="configurations">
+			<input type="checkbox"> Border
+			<input type="checkbox"> Background
+			<input type="checkbox"> Today
+		</div>
+	</div>
+	<a href="https://github.com/Khauri/Cascading-Calendar-Selector"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
+
+	<script src='html5/moment.min.js'></script>
+	<script src='html5/ccs/build/ccs.js'></script>
+	<script>
+		var calendar = CCS.create()
+		    .on('select', function(e) {
+		    	
+		    })
+		    .on('deselect', function(e) {
+		    	
+		    });
+	</script>
+
+</body>

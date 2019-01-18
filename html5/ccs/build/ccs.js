@@ -77,6 +77,7 @@ module.exports = (function() {
         this.cols = p.cols || 1;
         this.start_date = p.start_date[0] || moment();
         this.start_of = p.start_date[1] || [];
+        this.trackSelected = p.trackSelected || false;
         this.range = {
             start: getStartOf(p.range_start[0], p.range_start[1]),
             end: getEndOf(p.range_end[0], p.range_end[1]),
@@ -111,7 +112,7 @@ module.exports = (function() {
         display: display,
 
         fadeOut: fadeOut,
-        
+
         fadeIn: fadeIn,
         /**
             scroll this section of the calendar up or down
@@ -187,11 +188,13 @@ module.exports = (function() {
                 this.pointers.end.subtract(1, this.section);
                 doc.innerHTML = this.pointers.start.format(this.format);
                 if (!dateInRange(this.pointers.start, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+                if(this.trackSelected && this.cal.getSelected(this.pointers.start)) doc.classList.add("ccs_col_selected");
                 doc.id = this.pointers.start.format();
             } else {
                 doc.innerHTML = this.pointers.end.format(this.format);
                 doc.id = this.pointers.end.format();
                 if (!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+                if(this.trackSelected && this.cal.getSelected(this.pointers.end)) doc.classList.add("ccs_col_selected");
                 this.pointers.start.add(1, this.section);
                 this.pointers.end.add(1, this.section);
             }
@@ -234,6 +237,7 @@ module.exports = (function() {
             doc.id = this.pointers.end.format();
             doc.innerHTML = this.pointers.end.format(this.format);
             if (!dateInRange(this.pointers.end, this.range.start, this.range.end)) doc.classList.add("ccs_col_oor");
+            if(this.trackSelected && this.cal.getSelected(date)) doc.classList.add("ccs_col_selected");
             this.pointers.end.add(1, this.section);
         }
     }
@@ -249,7 +253,8 @@ module.exports = (function() {
     var events = require('./events');
 
     var ccs = function(o) {
-        //local settings
+        var t0 = performance.now();
+        //begin initalization
         if (typeof o != 'object') o = {};
         this.configs = {
             show: {
@@ -269,9 +274,6 @@ module.exports = (function() {
             selector: 'ccs',
             name: null,
             order: null,
-            //setting smoothScroll to true will add a touch event
-            //that generates excess rows and allows traversal by
-            //scroll bar
             smoothScroll: true, //not implemented in this version probably
             style: {
                 minWidth: 720,
@@ -279,7 +281,7 @@ module.exports = (function() {
             },
             years: {
                 selectable: true,
-                range:{
+                range: {
                     start: moment().subtract(100, "years"),
                     end: moment().add(100, "years")
                 } //200 years
@@ -300,10 +302,19 @@ module.exports = (function() {
                 section: 'days'
             }
         }
+
         this.today = moment();
+
         this.selections = [];
+
         this.config(o)
+
         init.call(this);
+        //end initialization
+        var t1 = performance.now();
+        //time to initialization
+        this.tti = t1-t0;
+        console.log("Time to initialize: ~"+ Math.round(this.tti)+"ms");
     }
 
     ccs.prototype = {
@@ -330,15 +341,23 @@ module.exports = (function() {
         goto: go,
 
         addSelection: addSelection,
-
+        /**
+            TODO: Remake the calendar based on new configurations
+         */
         update: update,
 
         removeSelection: removeSelection,
 
         getSelected: getSelected,
 
+        currentView: currV,
+        /**
+            Adds an event handler
+        */
         on: events.on,
-
+        /**
+            Removes an event handler
+        */
         off: events.off,
     }
 
@@ -351,13 +370,12 @@ module.exports = (function() {
 
     function init() {
         var self = this;
-        // create all the shit
-        // this should only be run one time probably
-        var t0 = performance.now();
+        /* create all the shit
+          this should only be run one time probably, whch
+          is why it's not a method of the constructor
+        */
         this.templated = utils.generate.calendar();
-        var t1 = performance.now();
-        console.log("template generated in " + (t1 - t0) + " milliseconds");
-
+        
         var root_el = document.querySelector(this.configs.selector);
 
         if (!root_el) root_el = document.createElement('ccs');
@@ -376,7 +394,7 @@ module.exports = (function() {
                 range_end: [start_date.clone(), [10, "years"]]
             }),
             months = new CalSection({
-                cal :self,
+                cal: self,
                 section: "months",
                 cols: 4,
                 rows: 4,
@@ -386,11 +404,12 @@ module.exports = (function() {
                 range_end: [start_date.clone(), ["year"]]
             }),
             days = new CalSection({
-                cal : self,
+                cal: self,
                 section: "days",
                 cols: 7,
                 rows: 6,
                 format: "D",
+                trackSelected: true,
                 start_date: [start_date.clone(), ["month", "week"]],
                 range_start: [start_date.clone(), ["month"]],
                 range_end: [start_date.clone(), ["month"]]
@@ -413,14 +432,14 @@ module.exports = (function() {
             order: [years, months, days],
             curr: 0
         };
+
+        this.sectionStack = [];
         this.switchTo(this.configs.start.section);
 
         this.view = root_el;
 
         //add events and such
         events.add(this);
-        var t2 = performance.now();
-        console.log("initialization complete in " + (t2 - t0) + " milliseconds");
 
         return this;
     }
@@ -441,12 +460,16 @@ module.exports = (function() {
         }
     }
 
+    function currV() {
+        return this.sections[this.sections.curr];
+    }
+
     function switchTo(v, hide) {
         var i = 0,
             curr = this.sections[i];
         while (curr) {
             if (curr.section.toLowerCase() == v.toLowerCase()) {
-                if(!hide) curr.display(true);
+                if (!hide) curr.display(true);
                 this.sections.curr = i;
             } else {
                 curr.display(false);
@@ -457,18 +480,19 @@ module.exports = (function() {
         return this;
     }
 
-    function go(date, section, animate){
+    function go(date, section, animate) {
         var self = this;
-        function switchIt(){
-            if(section) self.switchTo(section, true);
+
+        function switchIt() {
+            if (section) self.switchTo(section, true);
             self.sections[self.sections.curr].gotoDate(date);
-            if(animate){
+            if (animate) {
                 self.sections[self.sections.curr].fadeIn(null, true);
             }
         }
-        if(animate){
+        if (animate) {
             this.sections[this.sections.curr].fadeOut(switchIt, true);
-        }else{
+        } else {
             switchIt();
         }
         return this;
@@ -625,7 +649,9 @@ module.exports = (function() {
         this function needs more comments probably lmao
      */
     function addEvents(ccs) {
-        var root_el = ccs.templated.root;
+        var dragging = false,
+            start_el, selected, docs;
+        var root_el = ccs.templated.root.parentNode;
         root_el.addEventListener('click', function(e) {
             src_el = e.target || e.srcElement;
             /*
@@ -633,29 +659,13 @@ module.exports = (function() {
                 such as the days, years, and months
              */
             if (hasClass(src_el, "ccs_col")) {
-                if (hasClass(src_el, "ccs_col_days")) {
-                    src_el.classList.toggle("ccs_col_selected");
-                    var day = moment(e.srcElement.id);
-                    if (hasClass(src_el, 'ccs_col_selected')) {
-                        runEvents('select', {
-                            selection: day
-                        });
-                        ccs.addSelection(day);
-                    } else {
-                        runEvents('deselect', {
-                            selection: day
-                        });
-                        ccs.removeSelection(day);
-                    }
-                    ccs.next(day);
-                } else if (hasClass(src_el, "ccs_col_months")) {
+                if (hasClass(src_el, "ccs_col_months")) {
                     var month = moment(src_el.id).startOf('month');
                     ccs.next(month);
                 } else if (hasClass(src_el, "ccs_col_years")) {
                     var year = moment(src_el.id).startOf('year');
                     ccs.next(year);
                 }
-
             }
             /*
                 handle some of the controls
@@ -673,6 +683,62 @@ module.exports = (function() {
                 ccs.goto(moment(), 'days', true);
             }
             e.stopPropagation();
+        });
+        //drag over dates and such
+        root_el.addEventListener("mousedown",function(e){
+            selected = [];
+            src_el = e.target || e.srcElement;
+            if(hasClass(src_el, "ccs_col_days")){
+                docs = root_el.querySelectorAll(".ccs_col_days");
+                src_el.classList.toggle("ccs_col_selected");
+                start_el = src_el;
+                dragging = true;
+            }
+        });
+        root_el.addEventListener("mouseup",function(e){
+            if(!dragging) return false;
+            if (hasClass(src_el, "ccs_col_days")) {
+                var day = moment(e.srcElement.id);
+                if (hasClass(src_el, 'ccs_col_selected')) {
+                    runEvents('select', {
+                        //selection: day
+                    });
+                    ccs.addSelection(day);
+                } else {
+                    runEvents('deselect', {
+                        //selection: day
+                    });
+                    ccs.removeSelection(day);
+                }
+                ccs.next(day);
+                dragging = false;
+            }
+        });
+
+        root_el.addEventListener("mousemove",function(e){
+            src_el = e.target || e.srcElement;
+            if(src_el == start_el || !dragging) return false;
+            if(hasClass(src_el, "ccs_col_days")){
+                //get all td between this one and start_el
+                var populating = false, 
+                    doc;
+                for(var i=0;i<docs.length;i++){
+                    doc = docs[i];
+                    if(doc == src_el || doc == start_el){
+                        populating = !populating;
+                    }
+                    if(populating){
+                        if(start_el.classList.contains("ccs_col_selected")){
+                            doc.classList.add("ccs_col_selected");
+                        }else{
+                            doc.classList.remove("ccs_col_selected");
+                        }//doc.classList.toggle("ccs_col_selected");
+                    }else{
+                        doc.classList.remove("ccs_col_selected");
+                    }
+                }
+
+            }
         });
     }
 })();
@@ -701,21 +767,28 @@ module.exports = (function() {
 },{}],7:[function(require,module,exports){
 (function() {
     var templates = require('../lib/templates')
-    /* The real question is: which is faster, generating via this small template engine
+        /* The real question is: which is faster, generating via this small template engine
         or manually generating everything? The world may never know...*/
     var template = {
         "div.ccs_datePicker#datepicker": {
             "div.ccs_today#today": {},
             "div.ccs_controls#controls": {
                 "p.ccs_control.ccs_back#back": {},
-                "p.ccs_control.ccs_down#down":{},
+                "p.ccs_control.ccs_down#down": {},
                 "p.ccs_control.ccs_up#up": {}
             },
             "div.ccs_tables_cont#tables": {}
         },
         "div.ccs_sideBar#sidebar": {
-            "ul.ccs_tabs#tabs":{},
-            "ul.ccs_selections#selections":{}
+            "ul.ccs_tabs#tabs": {
+                "li.ccs_tab#datelist": {
+                    "ul.ccs_selections#selections": {},
+                },
+                "li.ccs_tab#time":{},
+            },
+            "div.ccs_footer#footer": {
+                "div.ccs_done_button#done": {}
+            },
         }
     };
 
@@ -740,29 +813,29 @@ module.exports = (function() {
                 return document.createTextNode(obj);
             }
             var keys = Object.keys(obj);
-            s = s.substring(0,s.indexOf("#"));
+            s = s.substring(0, s.indexOf("#"));
             var parsed = s.split(".");
             obj.root = newElement(parsed[0], parsed.slice(1));
             for (var i = 0, len = keys.length; i < len; i++) {
                 el = helper(obj[keys[i]], keys[i]);
-                if(el){
+                if (el) {
                     obj.root.appendChild(el);
                 }
             }
             return obj.root;
         }
-        helper(template, "ccs_root");
+        helper(template, "div.ccs_root#root");
         template.findById = findById;
         return template;
     }
 
-    function findById(id){
-        function helper(obj){
+    function findById(id) {
+        function helper(obj) {
             var keys = Object.keys(obj);
-            for(var i=0;i<keys.length;i++){
-                if(keys[i].substring(keys[i].indexOf("#")+1) == id) return obj[keys[i]];
+            for (var i = 0; i < keys.length; i++) {
+                if (keys[i].substring(keys[i].indexOf("#") + 1) == id) return obj[keys[i]];
                 val = helper(obj[keys[i]]);
-                if(val) return val;
+                if (val) return val;
             }
             return null;
         }

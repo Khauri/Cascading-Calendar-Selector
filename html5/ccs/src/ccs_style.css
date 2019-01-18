@@ -1,14 +1,12 @@
-body{
-	background-color:gray;
-}
 ccs {
 	display:inline-block;
 	padding:10px;
-	background-color:rgba(50,50,50,.75);
+	
+	/*background-color:rgba(50,50,50,.75);*/
 	font-family:helvetica, arial;
 	color:#fafafa;
 	overflow:hidden;
-	border: 1px solid #bcbcbc;
+	/*border: 1px solid #bcbcbc;*/
 }
 .ccs_no_background{
 	background-color:transparent !important;
@@ -17,10 +15,10 @@ ccs {
 	border: 0px !important;
 }
 ccs ul{
+	margin:0px;
 	list-style-type:none;
 }
 ccs li{
-	float:left;
 	padding-bottom:10px;
 }
 ccs th{
@@ -38,7 +36,17 @@ ccs *{
 }
 .ccs_sidebar{
 	float:right;
-	width:350px;
+	max-width:350px;
+	height:100px;
+}
+.ccs_tabs{
+	min-width:20px;
+	height:100%;
+}
+.ccs_tab{
+	background-color:rgba(0,0,0.3);
+	min-height:auto;
+	min-width:100%
 }
 .ccs_tables_cont{
 	min-width:350px;
@@ -91,6 +99,8 @@ ccs *{
 	border: 2px solid black;
 }
 .ccs_today{
+	padding-left:10px;
+	font-size:1.25em;
 	display:inline-block;
 	margin:10px 0px 10px 0px;
 	color:#bbb;

@@ -1,20 +1,27 @@
 (function() {
     var templates = require('../lib/templates')
-    /* The real question is: which is faster, generating via this small template engine
+        /* The real question is: which is faster, generating via this small template engine
         or manually generating everything? The world may never know...*/
     var template = {
         "div.ccs_datePicker#datepicker": {
             "div.ccs_today#today": {},
             "div.ccs_controls#controls": {
                 "p.ccs_control.ccs_back#back": {},
-                "p.ccs_control.ccs_down#down":{},
+                "p.ccs_control.ccs_down#down": {},
                 "p.ccs_control.ccs_up#up": {}
             },
             "div.ccs_tables_cont#tables": {}
         },
         "div.ccs_sideBar#sidebar": {
-            "ul.ccs_tabs#tabs":{},
-            "ul.ccs_selections#selections":{}
+            "ul.ccs_tabs#tabs": {
+                "li.ccs_tab#datelist": {
+                    "ul.ccs_selections#selections": {},
+                },
+                "li.ccs_tab#time":{},
+            },
+            "div.ccs_footer#footer": {
+                "div.ccs_done_button#done": {}
+            },
         }
     };
 
@@ -39,29 +46,29 @@
                 return document.createTextNode(obj);
             }
             var keys = Object.keys(obj);
-            s = s.substring(0,s.indexOf("#"));
+            s = s.substring(0, s.indexOf("#"));
             var parsed = s.split(".");
             obj.root = newElement(parsed[0], parsed.slice(1));
             for (var i = 0, len = keys.length; i < len; i++) {
                 el = helper(obj[keys[i]], keys[i]);
-                if(el){
+                if (el) {
                     obj.root.appendChild(el);
                 }
             }
             return obj.root;
         }
-        helper(template, "ccs_root");
+        helper(template, "div.ccs_root#root");
         template.findById = findById;
         return template;
     }
 
-    function findById(id){
-        function helper(obj){
+    function findById(id) {
+        function helper(obj) {
             var keys = Object.keys(obj);
-            for(var i=0;i<keys.length;i++){
-                if(keys[i].substring(keys[i].indexOf("#")+1) == id) return obj[keys[i]];
+            for (var i = 0; i < keys.length; i++) {
+                if (keys[i].substring(keys[i].indexOf("#") + 1) == id) return obj[keys[i]];
                 val = helper(obj[keys[i]]);
-                if(val) return val;
+                if (val) return val;
             }
             return null;
         }
